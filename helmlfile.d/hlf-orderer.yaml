@@ -1,0 +1,48 @@
+environments:
+  {{ $.Environment.Name }}:
+
+{{ $envPrefix := printf "%v-" $.Environment.Name }}
+
+releases:
+  - name: {{ $envPrefix }}{{ .Values.ordererName }}
+    chart: ../charts/hlf-ord
+    namespace: {{ $.Namespace }}
+
+    values:
+      - fullnameOverride: {{ .Values.ordererName }}-hlf-ord
+        nodeName: {{ .Values.ordererName }}
+        orgName: orderer
+
+        maintenanceMode: false
+
+        image:
+          tag: 2.2.0
+
+        persistence:
+          enabled: true
+          storageClass: standard
+          accessMode: ReadWriteOnce
+
+        ord:
+          type: raft
+          mspID: orderer
+          tls:
+            server:
+              enabled: "true"
+
+        secrets:
+          ord:
+            cert: hlf--{{ .Values.ordererName }}-orderer-idcert
+            key: hlf--{{ .Values.ordererName }}-orderer-idkey
+            caCert: hlf--{{ .Values.ordererName }}-orderer-cacert
+            tls: hlf--{{ .Values.ordererName }}-orderer-tls
+            tlsRootCert: hlf--{{ .Values.ordererName }}-orderer-tlsrootcert
+          genesis: hlf--genesis
+          adminCert: hlf--{{ .Values.ordererName }}-orderer-admincert
+
+    set:
+    - name: namespace
+      value: {{ $.Namespace }}
+
+    wait: true
+

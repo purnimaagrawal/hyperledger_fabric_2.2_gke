@@ -1,0 +1,91 @@
+environments:
+  {{ $.Environment.Name }}:
+
+{{ $envPrefix := printf "%v-" $.Environment.Name }}
+
+releases:
+# CouchDB
+  - name: {{ $envPrefix }}cdb-{{ .Values.peerName }}-{{ .Values.orgName }}
+    chart: ../charts/hlf-couchdb
+    namespace: {{ $.Namespace }}
+
+    values:
+      - fullnameOverride: cdb-{{ .Values.peerName }}-{{ .Values.orgName }}-hlf-couchdb
+        nodeName: {{ .Values.peerName }}
+        orgName: {{ .Values.orgName }}
+
+        maintenanceMode: false
+
+        image:
+          tag: 0.4.21
+
+        persistence:
+          enabled: true
+          storageClass: standard
+          accessMode: ReadWriteOnce
+
+        couchdbUsername: ""
+        couchdbPassword: ""
+
+    set:
+      - name: namespace
+        value: {{ $.Namespace }}
+
+    wait: true
+
+# Peer
+  - name: {{ $envPrefix }}{{ .Values.peerName }}-{{ .Values.orgName }}
+    chart: ../charts/hlf-peer
+    namespace: {{ $.Namespace }}
+
+    values:
+      - fullnameOverride: {{ .Values.peerName }}-{{ .Values.orgName }}-hlf-peer
+        nodeName: {{ .Values.peerName }}
+        orgName: {{ .Values.orgName }}
+
+        maintenanceMode: false
+
+        image:
+          tag: 2.2.0
+
+        persistence:
+          enabled: true
+          storageClass: standard
+          accessMode: ReadWriteOnce
+
+        peer:
+          peerID: {{ .Values.peerName }}-{{ .Values.orgName }}
+          databaseType: CouchDB
+          couchdbInstance: cdb-{{ .Values.peerName }}-{{ .Values.orgName }}
+          mspID: {{ .Values.orgName }}
+          gossip:
+            bootstrap: ""
+            endpoint: ""
+            externalEndpoint: {{ .Values.peerName }}-{{ .Values.orgName }}-hlf-peer.{{ $.Namespace }}.svc.cluster.local:7051
+            orgLeader: "false"
+            useLeaderElection: "true"
+
+          tls:
+            server:
+              enabled: "true"
+            client:
+              enabled: "false"
+          dind:
+            enabled: false
+
+        secrets:
+          peer:
+            cert: hlf--{{ .Values.peerName }}-{{ .Values.orgName }}-idcert
+            key: hlf--{{ .Values.peerName }}-{{ .Values.orgName }}-idkey
+            caCert: hlf--{{ .Values.peerName }}-{{ .Values.orgName }}-cacert
+            tls: hlf--{{ .Values.peerName }}-{{ .Values.orgName }}-tls
+            tlsClient: hlf--{{ .Values.peerName }}-{{ .Values.orgName }}-tls
+            tlsRootCert: hlf--{{ .Values.peerName }}-{{ .Values.orgName }}-tlsrootcert
+          adminCert: hlf--{{ .Values.peerName }}-{{ .Values.orgName }}-admincert
+          adminkey: hlf--{{ .Values.peerName }}-{{ .Values.orgName }}-adminkey
+
+    set:
+    - name: namespace
+      value: {{ $.Namespace }}
+
+    wait: true
